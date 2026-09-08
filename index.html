@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QQQ Movers</title>
+<title>QQQ / SPY Movers</title>
 <style>
   :root{
     --bg:#0B0F14;
@@ -13,6 +13,7 @@
     --mute:#7C8896;
     --up:#3DD68C;
     --down:#FF6B5E;
+    --accent:#E8A33D;
   }
   *{box-sizing:border-box;}
   body{
@@ -23,6 +24,30 @@
     padding:18px 14px 40px;
     max-width:520px;
     margin:0 auto;
+  }
+  .toggle{
+    display:flex;
+    gap:6px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:4px;
+    margin-bottom:18px;
+  }
+  .toggle button{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--mute);
+    font-size:14px;
+    font-weight:600;
+    padding:8px 0;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .toggle button.active{
+    background:var(--accent);
+    color:#1A1200;
   }
   .qqq-head{
     display:flex;
@@ -95,64 +120,98 @@
 </head>
 <body>
 
+  <div class="toggle">
+    <button id="btn-qqq" class="active">QQQ</button>
+    <button id="btn-spy">SPY</button>
+  </div>
+
   <div class="qqq-head">
     <div>
-      <div class="qqq-name">QQQ · Invesco Nasdaq-100</div>
+      <div class="qqq-name" id="idx-name">QQQ · Invesco Nasdaq-100</div>
       <div class="qqq-price" id="qqq-price">—</div>
     </div>
     <div class="qqq-chg" id="qqq-chg">—</div>
   </div>
   <div class="asof" id="asof">Cargando...</div>
 
-  <div class="section-label">Componentes con más peso — impacto estimado sobre QQQ</div>
+  <div class="section-label">Componentes con más peso — impacto estimado sobre el índice</div>
   <div id="rows"><div class="status">Cargando datos...</div></div>
 
   <div class="note">
-    Impacto = peso aproximado en el índice × variación % del día. Estimación con los ~8 mayores componentes (~40-45% del fondo); no reconcilia el 100% del movimiento de QQQ. Datos vía Finnhub, actualizados por un workflow de GitHub Actions cada ~15 min en horario de mercado (no es tick-a-tick).
+    Impacto = peso aproximado en el índice × variación % del día. Estimación con los componentes de mayor peso (~35-45% del fondo según el índice); no reconcilia el 100% del movimiento. Datos vía Finnhub, actualizados por GitHub Actions cada ~15 min en horario de mercado (no es tick-a-tick).
   </div>
 
 <script>
+const NAMES = {
+  QQQ: "QQQ · Invesco Nasdaq-100",
+  SPY: "SPY · SPDR S&P 500 ETF",
+};
+
+let currentIndex = "QQQ";
+let lastData = null;
+
+function render() {
+  if (!lastData) return;
+  const idx = lastData.indices[currentIndex];
+  if (!idx) return;
+
+  document.getElementById('idx-name').textContent = NAMES[currentIndex];
+  document.getElementById('qqq-price').textContent = idx.price != null ? '$' + idx.price.toFixed(2) : '—';
+
+  const chgEl = document.getElementById('qqq-chg');
+  const dir = (idx.chg_pct || 0) >= 0 ? 'up' : 'down';
+  chgEl.className = 'qqq-chg ' + dir;
+  chgEl.textContent = `${idx.chg >= 0 ? '+' : ''}${idx.chg?.toFixed(2)} (${idx.chg_pct >= 0 ? '+' : ''}${idx.chg_pct?.toFixed(2)}%)`;
+
+  const d = new Date(lastData.asof * 1000);
+  document.getElementById('asof').textContent =
+    'Última actualización: ' + d.toLocaleString('es-CO', { hour12: false });
+
+  const rowsEl = document.getElementById('rows');
+  rowsEl.innerHTML = '';
+  const maxAbsChg = Math.max(...idx.components.map(c => Math.abs(c.chg_pct || 0)), 0.01);
+
+  idx.components.forEach(c => {
+    const dir = (c.chg_pct || 0) >= 0 ? 'up' : 'down';
+    const barPct = Math.max(6, Math.abs(c.chg_pct || 0) / maxAbsChg * 100);
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="tkr">${c.t}</div>
+      <div>
+        <div class="wt">peso ~${c.w}%</div>
+        <div class="bar-wrap"><div class="bar ${dir}" style="width:${barPct}%"></div></div>
+      </div>
+      <div class="chg ${dir}">${c.chg_pct >= 0 ? '+' : ''}${c.chg_pct?.toFixed(2)}%</div>
+      <div class="impact ${dir}">${c.impact >= 0 ? '+' : ''}${c.impact?.toFixed(3)}pp</div>
+    `;
+    rowsEl.appendChild(row);
+  });
+}
+
 async function load() {
   try {
     const res = await fetch('data.json?_=' + Date.now());
-    const data = await res.json();
-
-    const q = data.qqq;
-    document.getElementById('qqq-price').textContent = q.price != null ? '$' + q.price.toFixed(2) : '—';
-    const chgEl = document.getElementById('qqq-chg');
-    const dir = (q.chg_pct || 0) >= 0 ? 'up' : 'down';
-    chgEl.className = 'qqq-chg ' + dir;
-    chgEl.textContent = `${q.chg >= 0 ? '+' : ''}${q.chg?.toFixed(2)} (${q.chg_pct >= 0 ? '+' : ''}${q.chg_pct?.toFixed(2)}%)`;
-
-    const d = new Date(data.asof * 1000);
-    document.getElementById('asof').textContent =
-      'Última actualización: ' + d.toLocaleString('es-CO', { hour12: false });
-
-    const rowsEl = document.getElementById('rows');
-    rowsEl.innerHTML = '';
-    const maxAbsChg = Math.max(...data.components.map(c => Math.abs(c.chg_pct || 0)), 0.01);
-
-    data.components.forEach(c => {
-      const dir = (c.chg_pct || 0) >= 0 ? 'up' : 'down';
-      const barPct = Math.max(6, Math.abs(c.chg_pct || 0) / maxAbsChg * 100);
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = `
-        <div class="tkr">${c.t}</div>
-        <div>
-          <div class="wt">peso ~${c.w}%</div>
-          <div class="bar-wrap"><div class="bar ${dir}" style="width:${barPct}%"></div></div>
-        </div>
-        <div class="chg ${dir}">${c.chg_pct >= 0 ? '+' : ''}${c.chg_pct?.toFixed(2)}%</div>
-        <div class="impact ${dir}">${c.impact >= 0 ? '+' : ''}${c.impact?.toFixed(3)}pp</div>
-      `;
-      rowsEl.appendChild(row);
-    });
+    lastData = await res.json();
+    render();
   } catch (e) {
     document.getElementById('rows').innerHTML =
       '<div class="status">No se pudo cargar data.json todavía (¿ya corrió el workflow al menos una vez?)</div>';
   }
 }
+
+document.getElementById('btn-qqq').addEventListener('click', () => {
+  currentIndex = 'QQQ';
+  document.getElementById('btn-qqq').classList.add('active');
+  document.getElementById('btn-spy').classList.remove('active');
+  render();
+});
+document.getElementById('btn-spy').addEventListener('click', () => {
+  currentIndex = 'SPY';
+  document.getElementById('btn-spy').classList.add('active');
+  document.getElementById('btn-qqq').classList.remove('active');
+  render();
+});
 
 load();
 setInterval(load, 60000); // refresca en el navegador cada 60s
