@@ -1,0 +1,32 @@
+name: Update QQQ dashboard data
+
+on:
+  schedule:
+    - cron: "*/15 13-21 * * 1-5"   # cada 15 min, 9:00am-5:00pm ET aprox, lun-vie (hora UTC)
+  workflow_dispatch: {}             # botón manual "Run workflow" en la pestaña Actions
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch quotes
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: python fetch_quotes.py
+
+      - name: Commit data.json
+        run: |
+          git config user.name "qqq-dashboard-bot"
+          git config user.email "actions@github.com"
+          git add data.json
+          git diff --quiet --cached || git commit -m "Update market data"
+          git push
