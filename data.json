@@ -1,143 +1,143 @@
 {
-  "asof": 1788983242,
+  "asof": 1788992598,
   "indices": {
     "QQQ": {
-      "price": 716.09,
-      "chg": -2.27,
-      "chg_pct": -0.316,
+      "price": 716.31,
+      "chg": -2.05,
+      "chg_pct": -0.2854,
       "components": [
         {
           "t": "META",
           "w": 3.3,
-          "price": 653.61,
-          "chg_pct": 6.5414,
+          "price": 653.69,
+          "chg_pct": 6.5544,
           "impact": 0.216
         },
         {
           "t": "AMZN",
           "w": 4.9,
-          "price": 252.35,
-          "chg_pct": -1.7979,
-          "impact": -0.088
+          "price": 252.4,
+          "chg_pct": -1.7784,
+          "impact": -0.087
         },
         {
           "t": "NVDA",
           "w": 9.0,
-          "price": 223.78,
-          "chg_pct": -0.8639,
-          "impact": -0.078
+          "price": 223.67,
+          "chg_pct": -0.9126,
+          "impact": -0.082
         },
         {
           "t": "GOOGL",
           "w": 3.2,
-          "price": 330.7,
-          "chg_pct": -2.2639,
-          "impact": -0.072
+          "price": 330.65,
+          "chg_pct": -2.2786,
+          "impact": -0.073
         },
         {
           "t": "AVGO",
           "w": 5.0,
-          "price": 364.19,
-          "chg_pct": -1.1857,
-          "impact": -0.059
+          "price": 364.38,
+          "chg_pct": -1.1341,
+          "impact": -0.057
         },
         {
           "t": "MSFT",
           "w": 5.5,
-          "price": 491.25,
-          "chg_pct": -0.5466,
-          "impact": -0.03
+          "price": 491.65,
+          "chg_pct": -0.4656,
+          "impact": -0.026
         },
         {
           "t": "AAPL",
           "w": 7.5,
-          "price": 315.69,
-          "chg_pct": -0.1676,
-          "impact": -0.013
+          "price": 315.34,
+          "chg_pct": -0.2783,
+          "impact": -0.021
         },
         {
           "t": "TSLA",
           "w": 2.7,
-          "price": 368.81,
-          "chg_pct": 0.1766,
-          "impact": 0.005
+          "price": 367.81,
+          "chg_pct": -0.0951,
+          "impact": -0.003
         }
       ]
     },
     "SPY": {
-      "price": 762.69,
-      "chg": -3.27,
-      "chg_pct": -0.4269,
+      "price": 762.4,
+      "chg": -3.56,
+      "chg_pct": -0.4648,
       "components": [
         {
           "t": "META",
           "w": 2.9,
-          "price": 653.61,
-          "chg_pct": 6.5414,
+          "price": 653.69,
+          "chg_pct": 6.5544,
           "impact": 0.19
-        },
-        {
-          "t": "AMZN",
-          "w": 3.9,
-          "price": 252.35,
-          "chg_pct": -1.7979,
-          "impact": -0.07
         },
         {
           "t": "NVDA",
           "w": 8.0,
-          "price": 223.78,
-          "chg_pct": -0.8639,
+          "price": 223.67,
+          "chg_pct": -0.9126,
+          "impact": -0.073
+        },
+        {
+          "t": "AMZN",
+          "w": 3.9,
+          "price": 252.4,
+          "chg_pct": -1.7784,
           "impact": -0.069
         },
         {
           "t": "GOOGL",
           "w": 2.3,
-          "price": 330.7,
-          "chg_pct": -2.2639,
+          "price": 330.65,
+          "chg_pct": -2.2786,
           "impact": -0.052
         },
         {
           "t": "GOOG",
           "w": 1.8,
-          "price": 328.43,
-          "chg_pct": -2.0723,
-          "impact": -0.037
+          "price": 328.38,
+          "chg_pct": -2.0872,
+          "impact": -0.038
         },
         {
           "t": "AVGO",
           "w": 2.6,
-          "price": 364.19,
-          "chg_pct": -1.1857,
-          "impact": -0.031
+          "price": 364.38,
+          "chg_pct": -1.1341,
+          "impact": -0.029
         },
         {
           "t": "MSFT",
           "w": 5.5,
-          "price": 491.25,
-          "chg_pct": -0.5466,
-          "impact": -0.03
+          "price": 491.65,
+          "chg_pct": -0.4656,
+          "impact": -0.026
         },
         {
           "t": "AAPL",
           "w": 7.0,
-          "price": 315.69,
-          "chg_pct": -0.1676,
-          "impact": -0.012
+          "price": 315.34,
+          "chg_pct": -0.2783,
+          "impact": -0.019
         },
         {
           "t": "JPM",
           "w": 1.6,
-          "price": 355.05,
-          "chg_pct": 0.4356,
-          "impact": 0.007
+          "price": 354.71,
+          "chg_pct": 0.3395,
+          "impact": 0.005
         },
         {
           "t": "TSLA",
           "w": 1.7,
-          "price": 368.81,
-          "chg_pct": 0.1766,
-          "impact": 0.003
+          "price": 367.81,
+          "chg_pct": -0.0951,
+          "impact": -0.002
         }
       ]
     }
