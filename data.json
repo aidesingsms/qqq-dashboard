@@ -1,143 +1,143 @@
 {
-  "asof": 1789145873,
+  "asof": 1789155211,
   "indices": {
     "QQQ": {
-      "price": 715.96,
-      "chg": 7.27,
-      "chg_pct": 1.0258,
+      "price": 715.65,
+      "chg": 6.96,
+      "chg_pct": 0.9821,
       "components": [
         {
           "t": "AAPL",
           "w": 7.5,
-          "price": 334.48,
-          "chg_pct": 2.4221,
-          "impact": 0.182
-        },
-        {
-          "t": "GOOGL",
-          "w": 3.2,
-          "price": 340.99,
-          "chg_pct": 2.5225,
-          "impact": 0.081
+          "price": 332.79,
+          "chg_pct": 1.9046,
+          "impact": 0.143
         },
         {
           "t": "AMZN",
           "w": 4.9,
-          "price": 255.82,
-          "chg_pct": 1.5602,
-          "impact": 0.076
+          "price": 257.27,
+          "chg_pct": 2.1359,
+          "impact": 0.105
+        },
+        {
+          "t": "GOOGL",
+          "w": 3.2,
+          "price": 339.17,
+          "chg_pct": 1.9753,
+          "impact": 0.063
+        },
+        {
+          "t": "MSFT",
+          "w": 5.5,
+          "price": 496.99,
+          "chg_pct": 0.924,
+          "impact": 0.051
         },
         {
           "t": "AVGO",
           "w": 5.0,
-          "price": 364.8,
-          "chg_pct": 1.1002,
-          "impact": 0.055
-        },
-        {
-          "t": "NVDA",
-          "w": 9.0,
-          "price": 219.11,
-          "chg_pct": 0.3435,
-          "impact": 0.031
-        },
-        {
-          "t": "MSFT",
-          "w": 5.5,
-          "price": 494.63,
-          "chg_pct": 0.4447,
-          "impact": 0.024
+          "price": 363.01,
+          "chg_pct": 0.6042,
+          "impact": 0.03
         },
         {
           "t": "META",
           "w": 3.3,
-          "price": 648.1,
-          "chg_pct": 0.5773,
-          "impact": 0.019
+          "price": 650.19,
+          "chg_pct": 0.9016,
+          "impact": 0.03
         },
         {
           "t": "TSLA",
           "w": 2.7,
-          "price": 365.2,
-          "chg_pct": 0.4511,
-          "impact": 0.012
+          "price": 364.79,
+          "chg_pct": 0.3383,
+          "impact": 0.009
+        },
+        {
+          "t": "NVDA",
+          "w": 9.0,
+          "price": 218.3,
+          "chg_pct": -0.0275,
+          "impact": -0.002
         }
       ]
     },
     "SPY": {
-      "price": 765.48,
-      "chg": 7.65,
-      "chg_pct": 1.0095,
+      "price": 765.01,
+      "chg": 7.18,
+      "chg_pct": 0.9474,
       "components": [
         {
           "t": "AAPL",
           "w": 7.0,
-          "price": 334.48,
-          "chg_pct": 2.4221,
-          "impact": 0.17
+          "price": 332.79,
+          "chg_pct": 1.9046,
+          "impact": 0.133
         },
         {
           "t": "AMZN",
           "w": 3.9,
-          "price": 255.82,
-          "chg_pct": 1.5602,
-          "impact": 0.061
-        },
-        {
-          "t": "GOOGL",
-          "w": 2.3,
-          "price": 340.99,
-          "chg_pct": 2.5225,
-          "impact": 0.058
-        },
-        {
-          "t": "GOOG",
-          "w": 1.8,
-          "price": 337.94,
-          "chg_pct": 2.2852,
-          "impact": 0.041
-        },
-        {
-          "t": "AVGO",
-          "w": 2.6,
-          "price": 364.8,
-          "chg_pct": 1.1002,
-          "impact": 0.029
-        },
-        {
-          "t": "NVDA",
-          "w": 8.0,
-          "price": 219.11,
-          "chg_pct": 0.3435,
-          "impact": 0.027
+          "price": 257.27,
+          "chg_pct": 2.1359,
+          "impact": 0.083
         },
         {
           "t": "MSFT",
           "w": 5.5,
-          "price": 494.63,
-          "chg_pct": 0.4447,
-          "impact": 0.024
+          "price": 496.99,
+          "chg_pct": 0.924,
+          "impact": 0.051
         },
         {
-          "t": "JPM",
-          "w": 1.6,
-          "price": 357.47,
-          "chg_pct": 1.1059,
-          "impact": 0.018
+          "t": "GOOGL",
+          "w": 2.3,
+          "price": 339.17,
+          "chg_pct": 1.9753,
+          "impact": 0.045
+        },
+        {
+          "t": "GOOG",
+          "w": 1.8,
+          "price": 336.09,
+          "chg_pct": 1.7252,
+          "impact": 0.031
         },
         {
           "t": "META",
           "w": 2.9,
-          "price": 648.1,
-          "chg_pct": 0.5773,
-          "impact": 0.017
+          "price": 650.19,
+          "chg_pct": 0.9016,
+          "impact": 0.026
+        },
+        {
+          "t": "AVGO",
+          "w": 2.6,
+          "price": 363.01,
+          "chg_pct": 0.6042,
+          "impact": 0.016
+        },
+        {
+          "t": "JPM",
+          "w": 1.6,
+          "price": 356.5,
+          "chg_pct": 0.8315,
+          "impact": 0.013
         },
         {
           "t": "TSLA",
           "w": 1.7,
-          "price": 365.2,
-          "chg_pct": 0.4511,
-          "impact": 0.008
+          "price": 364.79,
+          "chg_pct": 0.3383,
+          "impact": 0.006
+        },
+        {
+          "t": "NVDA",
+          "w": 8.0,
+          "price": 218.3,
+          "chg_pct": -0.0275,
+          "impact": -0.002
         }
       ]
     }
