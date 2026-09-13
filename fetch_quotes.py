@@ -1,9 +1,13 @@
 import os
 import json
 import time
+import math
 import urllib.request
 
 API_KEY = os.environ["FINNHUB_API_KEY"]
+HISTORY_FILE = "history.json"
+BB_PERIOD = 20      # periodos para SMA/stdev del Bollinger Bandwidth
+MAX_HISTORY = 100    # tope de puntos guardados por símbolo (evita crecer sin control)
 
 # pesos aproximados por índice (%) -- ajustar trimestralmente
 INDEX_HOLDINGS = {
@@ -23,6 +27,46 @@ def get_quote(symbol):
     with urllib.request.urlopen(url, timeout=10) as r:
         return json.loads(r.read().decode())
 
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+def update_history(history, symbol, price, ts):
+    if price is None:
+        return
+    series = history.setdefault(symbol, [])
+    series.append({"t": ts, "c": price})
+    if len(series) > MAX_HISTORY:
+        del series[: len(series) - MAX_HISTORY]
+
+def bollinger_bandwidth(history, symbol, period=BB_PERIOD):
+    series = history.get(symbol, [])
+    if len(series) < period:
+        return {"ready": False, "n": len(series), "period": period}
+    closes = [p["c"] for p in series[-period:]]
+    sma = sum(closes) / period
+    variance = sum((c - sma) ** 2 for c in closes) / period
+    stdev = math.sqrt(variance)
+    upper = sma + 2 * stdev
+    lower = sma - 2 * stdev
+    if sma == 0:
+        return None
+    bandwidth_pct = ((upper - lower) / sma) * 100
+    return {
+        "ready": True,
+        "sma": round(sma, 3),
+        "upper": round(upper, 3),
+        "lower": round(lower, 3),
+        "bandwidth_pct": round(bandwidth_pct, 3),
+        "n": len(closes),
+        "period": period,
+    }
+
 def main():
     # símbolo único a consultar: índices + unión de todos los componentes
     all_symbols = set(INDEX_HOLDINGS.keys())
@@ -34,7 +78,14 @@ def main():
         quotes[symbol] = get_quote(symbol)
         time.sleep(1)  # cortesía con el rate limit gratuito (60/min)
 
-    out = {"asof": int(time.time()), "indices": {}}
+    now = int(time.time())
+    history = load_history()
+    for index_symbol in INDEX_HOLDINGS.keys():
+        update_history(history, index_symbol, quotes[index_symbol].get("c"), now)
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f)
+
+    out = {"asof": now, "indices": {}}
 
     for index_symbol, holdings in INDEX_HOLDINGS.items():
         q = quotes[index_symbol]
@@ -57,6 +108,7 @@ def main():
             "chg": q.get("d"),
             "chg_pct": q.get("dp"),
             "components": components,
+            "bollinger": bollinger_bandwidth(history, index_symbol),
         }
 
     with open("data.json", "w") as f:

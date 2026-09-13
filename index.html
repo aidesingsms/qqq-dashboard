@@ -116,6 +116,28 @@
     line-height:1.5;
   }
   .status{font-size:12px;color:var(--mute);}
+  .bb-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:18px;
+  }
+  .bb-label{font-size:12px;color:var(--mute);}
+  .bb-value{font-family:'Consolas','SF Mono',monospace;font-size:15px;font-weight:600;margin-top:2px;}
+  .bb-tag{
+    font-size:11px;
+    font-weight:600;
+    padding:4px 9px;
+    border-radius:6px;
+  }
+  .bb-tag.squeeze{background:rgba(232,163,61,.18);color:var(--accent);}
+  .bb-tag.normal{background:rgba(124,136,150,.15);color:var(--mute);}
+  .bb-tag.wide{background:rgba(61,214,140,.15);color:var(--up);}
+  .bb-tag.na{background:rgba(124,136,150,.1);color:var(--mute);}
 </style>
 </head>
 <body>
@@ -133,6 +155,14 @@
     <div class="qqq-chg" id="qqq-chg">—</div>
   </div>
   <div class="asof" id="asof">Cargando...</div>
+
+  <div class="bb-box" id="bb-box">
+    <div>
+      <div class="bb-label">Bollinger Bandwidth (20 periodos, ~15min c/u)</div>
+      <div class="bb-value" id="bb-value">—</div>
+    </div>
+    <div class="bb-tag na" id="bb-tag">n/a</div>
+  </div>
 
   <div class="section-label">Componentes con más peso — impacto estimado sobre el índice</div>
   <div id="rows"><div class="status">Cargando datos...</div></div>
@@ -166,6 +196,25 @@ function render() {
   const d = new Date(lastData.asof * 1000);
   document.getElementById('asof').textContent =
     'Última actualización: ' + d.toLocaleString('es-CO', { hour12: false });
+
+  const bb = idx.bollinger;
+  const bbValueEl = document.getElementById('bb-value');
+  const bbTagEl = document.getElementById('bb-tag');
+  if (!bb || !bb.ready) {
+    const n = bb ? bb.n : 0;
+    const period = bb ? bb.period : 20;
+    bbValueEl.textContent = `Acumulando historial (${n}/${period} lecturas)…`;
+    bbTagEl.className = 'bb-tag na';
+    bbTagEl.textContent = 'n/a';
+  } else {
+    bbValueEl.textContent = bb.bandwidth_pct.toFixed(2) + '%  (SMA ' + bb.sma.toFixed(2) + ')';
+    // Umbrales iniciales orientativos -- ajustar con datos reales acumulados
+    let tag = 'normal', label = 'normal';
+    if (bb.bandwidth_pct < 0.5) { tag = 'squeeze'; label = 'squeeze'; }
+    else if (bb.bandwidth_pct > 1.5) { tag = 'wide'; label = 'amplio'; }
+    bbTagEl.className = 'bb-tag ' + tag;
+    bbTagEl.textContent = label;
+  }
 
   const rowsEl = document.getElementById('rows');
   rowsEl.innerHTML = '';

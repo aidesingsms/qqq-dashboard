@@ -27,6 +27,6 @@ jobs:
         run: |
           git config user.name "qqq-dashboard-bot"
           git config user.email "actions@github.com"
-          git add data.json
+          git add data.json history.json
           git diff --quiet --cached || git commit -m "Update market data"
           git push
