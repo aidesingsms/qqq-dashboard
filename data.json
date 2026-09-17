@@ -1,5 +1,5 @@
 {
-  "asof": 1789677272,
+  "asof": 1789686460,
   "indices": {
     "QQQ": {
       "price": 716.92,
@@ -65,7 +65,7 @@
       ],
       "bollinger": {
         "ready": false,
-        "n": 10,
+        "n": 11,
         "period": 20
       }
     },
@@ -147,7 +147,7 @@
       ],
       "bollinger": {
         "ready": false,
-        "n": 10,
+        "n": 11,
         "period": 20
       }
     }
