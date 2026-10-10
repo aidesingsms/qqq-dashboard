@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scoring de entradas · SPY / QQQ</title>
+<style>
+  :root{
+    --bg:#0B0F14; --panel:#11161D; --line:#1F2732; --ink:#E7ECF2; --mute:#7C8896;
+    --up:#3DD68C; --down:#FF6B5E; --accent:#E8A33D;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0 auto; background:var(--bg); color:var(--ink);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    padding:18px 14px 48px; max-width:520px;
+  }
+  a{color:var(--accent);text-decoration:none;font-size:12.5px;}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .toggle{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px;margin-bottom:14px;}
+  .toggle button{flex:1;border:none;background:transparent;color:var(--mute);font-size:14px;font-weight:600;padding:8px 0;border-radius:6px;cursor:pointer;}
+  .toggle button.active{background:var(--accent);color:#1A1200;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .verdict{text-align:center;}
+  .verdict .v{font-size:30px;font-weight:700;letter-spacing:.02em;margin:2px 0;}
+  .verdict .v.call{color:var(--up);} .verdict .v.put{color:var(--down);} .verdict .v.none{color:var(--mute);}
+  .verdict .sub{font-size:13px;color:var(--mute);line-height:1.5;}
+  .verdict .size{font-family:'Consolas','SF Mono',monospace;font-size:14px;margin-top:8px;}
+  .scores{display:flex;justify-content:center;gap:22px;margin:8px 0 4px;font-family:'Consolas','SF Mono',monospace;font-size:13px;}
+  .scores .c{color:var(--up);} .scores .p{color:var(--down);}
+  h2{font-size:12px;font-weight:600;color:var(--mute);letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;}
+  .gate{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);}
+  .gate:last-child{border-bottom:none;}
+  .gate .i{width:16px;flex:none;font-weight:700;}
+  .gate .i.ok{color:var(--up);} .gate .i.no{color:var(--down);}
+  .gate .d{color:var(--mute);font-size:11.5px;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{font-size:11px;color:var(--mute);font-weight:600;text-align:center;padding:0 0 6px;}
+  th:first-child,td:first-child{text-align:left;}
+  td{padding:7px 0;border-bottom:1px solid var(--line);text-align:center;font-family:'Consolas','SF Mono',monospace;}
+  td:first-child{font-family:inherit;padding-right:6px;}
+  td .d{display:block;font-size:10.5px;color:var(--mute);font-family:'Segoe UI',system-ui,sans-serif;}
+  td.hit{color:var(--up);font-weight:700;} td.miss{color:var(--mute);} td.unk{color:#4A5563;}
+  tr.total td{border-bottom:none;font-weight:700;padding-top:9px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  label.f{display:block;font-size:11px;color:var(--mute);}
+  label.f input,label.f select{
+    width:100%;margin-top:3px;background:#0E131A;color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:8px 9px;font-size:14px;font-family:'Consolas','SF Mono',monospace;
+  }
+  label.f input::placeholder{color:#47525F;}
+  label.f input:focus,label.f select:focus{outline:1px solid var(--accent);}
+  .row-actions{display:flex;gap:8px;margin-top:10px;}
+  button.btn{flex:1;background:transparent;border:1px solid var(--line);color:var(--mute);border-radius:6px;padding:8px;font-size:12.5px;cursor:pointer;}
+  .check{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--mute);margin-top:10px;}
+  .action{text-align:center;font-size:24px;font-weight:700;margin:4px 0 10px;}
+  .action.all{color:var(--down);} .action.half{color:var(--accent);} .action.hold{color:var(--up);}
+  .sig{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line);}
+  .sig:last-child{border-bottom:none;}
+  .sig .hit{color:var(--down);font-weight:700;} .sig .d{color:var(--mute);font-size:11.5px;text-align:right;}
+  .note{font-size:11.5px;color:var(--mute);line-height:1.55;margin-top:6px;}
+  .asof{font-size:11px;color:var(--mute);margin:-6px 0 12px;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a href="index.html">← Movers</a>
+  <span class="asof" id="srcinfo" style="margin:0">Cargando…</span>
+</div>
+
+<div class="toggle">
+  <button id="btn-QQQ" class="active">QQQ</button>
+  <button id="btn-SPY">SPY</button>
+</div>
+
+<div class="card verdict" id="verdict"></div>
+
+<div class="card"><h2>Filtros previos</h2><div id="gates"></div></div>
+
+<div class="card">
+  <h2>Scoring de entrada</h2>
+  <table id="score-table"></table>
+  <div class="note">Verde = cumple · gris = no cumple · oscuro = faltan datos (no suma puntos). Con ≥8 y estructura alineada: A+ (5). Con 6-7: base (3). Con 5: solo si la estructura está alineada. Estructura mixta: tamaño reducido.</div>
+</div>
+
+<div class="card">
+  <h2>Datos de mercado</h2>
+  <div class="grid" id="f-market"></div>
+  <h2 style="margin-top:14px">Niveles GEX</h2>
+  <div class="grid" id="f-gex"></div>
+  <h2 style="margin-top:14px">Flujo</h2>
+  <div class="grid" id="f-flow"></div>
+  <div class="grid" style="margin-top:10px">
+    <label class="f">Ratio QQQ/SPY
+      <select id="ratio">
+        <option value="auto">Auto (fuerza relativa del día)</option>
+        <option value="up">QQQ más fuerte</option>
+        <option value="down">SPY más fuerte</option>
+        <option value="none">Sin lectura</option>
+      </select>
+    </label>
+    <label class="f">Spread contrato (%)<input id="spreadPct" type="number" step="any" inputmode="decimal"></label>
+  </div>
+  <div class="note">Los campos vacíos usan el valor automático (precio de <code>data.json</code>, o lo que publique <code>signals.json</code>); lo que escribas aquí tiene prioridad. Se guarda en este dispositivo.</div>
+</div>
+
+<div class="card">
+  <h2>Disciplina del día</h2>
+  <div class="grid" id="f-risk"></div>
+  <div class="grid" style="margin-top:10px">
+    <label class="f">Hora ET (vacío = reloj real)<input id="clock" type="text" placeholder="HH:MM" inputmode="numeric"></label>
+    <div class="note" id="clockinfo" style="margin-top:20px"></div>
+  </div>
+  <div class="row-actions"><button class="btn" id="reset-market">Limpiar datos de mercado</button><button class="btn" id="reset-risk">Nuevo día</button></div>
+</div>
+
+<div class="card">
+  <h2>Salida de posición abierta</h2>
+  <div class="grid">
+    <label class="f">Lado
+      <select id="pos-side"><option value="CALL">CALL</option><option value="PUT">PUT</option></select>
+    </label>
+    <label class="f">Prima de entrada<input id="pos-entry" type="number" step="any" inputmode="decimal"></label>
+    <label class="f">Prima actual<input id="pos-cur" type="number" step="any" inputmode="decimal"></label>
+    <label class="f">Minutos abierta<input id="pos-min" type="number" step="any" inputmode="decimal"></label>
+  </div>
+  <label class="check"><input type="checkbox" id="pos-partial"> Ya cerré el 50% en el muro</label>
+  <div style="margin-top:12px" id="exit-out"></div>
+</div>
+
+<div class="note">Herramienta de apoyo para tu plan, no es una recomendación financiera. Los pesos, tolerancias y umbrales están en <code>scoring.js</code> y conviene calibrarlos con tus trades.</div>
+
+<script src="scoring.js"></script>
+<script>
+const MARKET = [
+  ['price','Precio'], ['vwap','VWAP'], ['ema9','EMA 9'], ['ema21','EMA 21'], ['ema50','EMA 50'],
+  ['bbMid','Media Bollinger'], ['relVol','Volumen rel. (x)'],
+];
+const GEX = [['zeroGamma','Zero Gamma'], ['callWall','Call Wall'], ['putWall','Put Wall'], ['netGex','Net GEX']];
+const FLOW = [['agresor','Agresor (% ask−bid)'], ['qDelta','Q Delta'], ['qDeltaPrev','Q Delta anterior']];
+const RISK = [['tradesToday','Trades hoy'], ['consecLosses','Pérdidas seguidas'], ['dailyPnl','P&L del día (USD)'], ['maxSpreadPct','Spread máx. (%)']];
+const MARKET_KEYS = [...MARKET, ...GEX, ...FLOW, ['spreadPct']].map(x => x[0]);
+const STORE = 'scoring_inputs_v1';
+
+let symbol = 'QQQ';
+let data = null;      // data.json
+let signals = {};     // signals.json
+let saved = { sym: { QQQ: {}, SPY: {} }, risk: {}, ratio: 'auto', clock: '', pos: {} };
+
+function load() { try { const s = JSON.parse(localStorage.getItem(STORE)); if (s) saved = Object.assign(saved, s); } catch (e) {} }
+function persist() { try { localStorage.setItem(STORE, JSON.stringify(saved)); } catch (e) {} }
+
+function field([id, label]) {
+  return `<label class="f">${label}<input id="${id}" type="number" step="any" inputmode="decimal" data-k="${id}"></label>`;
+}
+function buildForms() {
+  document.getElementById('f-market').innerHTML = MARKET.map(field).join('');
+  document.getElementById('f-gex').innerHTML = GEX.map(field).join('');
+  document.getElementById('f-flow').innerHTML = FLOW.map(field).join('');
+  document.getElementById('f-risk').innerHTML = RISK.map(field).join('');
+}
+
+function autoValue(k) {
+  const s = signals[symbol] || {};
+  const gex = s.gex || {};
+  if (k in gex && gex[k] != null) return gex[k];
+  if (s[k] != null) return s[k];
+  if (k === 'price' && data && data.indices && data.indices[symbol]) return data.indices[symbol].price;
+  return null;
+}
+function autoRatio() {
+  if (!data || !data.indices || !data.indices.QQQ || !data.indices.SPY) return null;
+  const d = data.indices.QQQ.chg_pct - data.indices.SPY.chg_pct;
+  if (d > 0.05) return 'up';
+  if (d < -0.05) return 'down';
+  return null;
+}
+function manual(k) { const v = (saved.sym[symbol] || {})[k]; return v === undefined || v === '' ? null : v; }
+function value(k) { const m = manual(k); return m !== null ? m : autoValue(k); }
+
+function collect() {
+  const inp = { symbol };
+  [...MARKET, ...GEX, ...FLOW].forEach(([k]) => { inp[k] = value(k); });
+  inp.spreadPct = value('spreadPct');
+  RISK.forEach(([k]) => { const v = saved.risk[k]; inp[k] = v === undefined || v === '' ? null : v; });
+  const r = saved.ratio;
+  inp.ratio = r === 'auto' ? autoRatio() : (r === 'up' || r === 'down' ? r : null);
+  return inp;
+}
+function nowMin() {
+  const o = Scoring.parseHHMM(saved.clock);
+  return o !== null ? o : Scoring.minutesET(new Date());
+}
+
+function syncInputs() {
+  document.querySelectorAll('input[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    if (RISK.some(r => r[0] === k)) {
+      el.value = saved.risk[k] ?? '';
+      el.placeholder = k === 'maxSpreadPct' ? String(Scoring.CFG.maxSpreadPct) : '0';
+    } else {
+      el.value = (saved.sym[symbol] || {})[k] ?? '';
+      const a = autoValue(k);
+      el.placeholder = a != null ? 'auto ' + a : '—';
+    }
+  });
+  const sp = document.getElementById('spreadPct');
+  sp.value = (saved.sym[symbol] || {}).spreadPct ?? '';
+  sp.placeholder = autoValue('spreadPct') != null ? 'auto ' + autoValue('spreadPct') : '—';
+  document.getElementById('ratio').value = saved.ratio;
+  document.getElementById('clock').value = saved.clock || '';
+  const p = saved.pos || {};
+  document.getElementById('pos-side').value = p.side || 'CALL';
+  document.getElementById('pos-entry').value = p.entry ?? '';
+  document.getElementById('pos-cur').value = p.cur ?? '';
+  document.getElementById('pos-min').value = p.min ?? '';
+  document.getElementById('pos-partial').checked = !!p.partial;
+}
+
+function fmt(v) { return v === null || v === undefined ? '—' : v; }
+
+function render() {
+  const inp = collect();
+  const now = nowMin();
+  const r = Scoring.evaluateEntry(inp, now);
+
+  document.getElementById('clockinfo').textContent =
+    (saved.clock ? 'Hora manual: ' : 'Reloj real: ') + Scoring.fmtMin(now) + ' ET';
+
+  // veredicto
+  const cls = r.side === 'CALL' ? 'call' : r.side === 'PUT' ? 'put' : 'none';
+  const title = r.side ? `${r.side}${r.verdict === 'A+' ? ' · A+' : ''}` : 'NO ENTRAR';
+  let extra = '';
+  if (r.side) {
+    const lv = r.levels || {};
+    extra = `<div class="size">${r.contracts} contratos E*TRADE · ${r.webullContracts} Webull</div>
+      <div class="sub" style="margin-top:6px">Entrada ~${fmt(lv.entry)} · Stop ${lv.stopPremiumPct}% prima ·
+      Parcial ${lv.partialTarget != null ? 'en ' + lv.partialTarget : 'sin muro adelante'} · Resto: ${lv.trailing}</div>`;
+  }
+  document.getElementById('verdict').innerHTML = `
+    <div class="sub">${symbol} · puntaje</div>
+    <div class="scores"><span class="c">CALL ${r.call.total}/10</span><span class="p">PUT ${r.put.total}/10</span></div>
+    <div class="v ${cls}">${title}</div>
+    <div class="sub">${r.note}</div>${extra}`;
+
+  // filtros
+  document.getElementById('gates').innerHTML = r.gates.map(g => `
+    <div class="gate"><span class="i ${g.ok ? 'ok' : 'no'}">${g.ok ? '✓' : '✗'}</span>
+    <div>${g.label}<div class="d">${g.detail}</div></div></div>`).join('');
+
+  // tabla
+  const rows = r.call.parts.map((cp, i) => {
+    const pp = r.put.parts[i];
+    const cell = p => `<td class="${!p.known ? 'unk' : p.ok ? 'hit' : 'miss'}">${p.pts}/${p.max}</td>`;
+    return `<tr><td>${cp.label}<span class="d">CALL: ${cp.detail} · PUT: ${pp.detail}</span></td>${cell(cp)}${cell(pp)}</tr>`;
+  }).join('');
+  document.getElementById('score-table').innerHTML =
+    `<tr><th></th><th>CALL</th><th>PUT</th></tr>${rows}
+     <tr class="total"><td>Total</td><td style="color:var(--up)">${r.call.total}/10</td><td style="color:var(--down)">${r.put.total}/10</td></tr>`;
+
+  // salida
+  const p = saved.pos || {};
+  const pos = { side: p.side || 'CALL', entryPremium: p.entry, premium: p.cur, minutesOpen: p.min, partialDone: !!p.partial };
+  const ex = Scoring.evaluateExit(pos, inp, now);
+  const ac = ex.action === 'CERRAR TODO' ? 'all' : ex.action === 'CERRAR 50%' ? 'half' : 'hold';
+  document.getElementById('exit-out').innerHTML = `
+    <div class="action ${ac}">${ex.action}</div>
+    ${ex.pnlPct !== null ? `<div class="sub" style="text-align:center;font-size:12.5px;color:var(--mute);margin-bottom:8px">Prima ${ex.pnlPct >= 0 ? '+' : ''}${ex.pnlPct.toFixed(1)}%</div>` : ''}
+    ${ex.signals.map(s => `<div class="sig"><span class="${s.hit ? 'hit' : ''}">${s.hit ? '● ' : '○ '}${s.label}</span><span class="d">${s.detail}</span></div>`).join('')}`;
+}
+
+// ---- eventos ----
+function bind() {
+  document.body.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset && el.dataset.k && !RISK.some(r => r[0] === el.dataset.k)) {
+      (saved.sym[symbol] = saved.sym[symbol] || {})[el.dataset.k] = el.value;
+    } else if (el.dataset && el.dataset.k) {
+      saved.risk[el.dataset.k] = el.value;
+    } else if (el.id === 'spreadPct') {
+      (saved.sym[symbol] = saved.sym[symbol] || {}).spreadPct = el.value;
+    } else if (el.id === 'ratio') { saved.ratio = el.value; }
+    else if (el.id === 'clock') { saved.clock = el.value; }
+    else if (el.id.startsWith('pos-')) {
+      saved.pos = saved.pos || {};
+      const m = { 'pos-side': 'side', 'pos-entry': 'entry', 'pos-cur': 'cur', 'pos-min': 'min' };
+      if (el.id === 'pos-partial') saved.pos.partial = el.checked; else saved.pos[m[el.id]] = el.value;
+    } else return;
+    persist(); render();
+  });
+  ['QQQ', 'SPY'].forEach(s => document.getElementById('btn-' + s).addEventListener('click', () => {
+    symbol = s;
+    document.getElementById('btn-QQQ').classList.toggle('active', s === 'QQQ');
+    document.getElementById('btn-SPY').classList.toggle('active', s === 'SPY');
+    syncInputs(); render();
+  }));
+  document.getElementById('reset-market').addEventListener('click', () => {
+    saved.sym[symbol] = {}; persist(); syncInputs(); render();
+  });
+  document.getElementById('reset-risk').addEventListener('click', () => {
+    saved.risk = {}; saved.pos = {}; persist(); syncInputs(); render();
+  });
+}
+
+async function fetchJson(url) {
+  try { const r = await fetch(url + '?_=' + Date.now()); if (!r.ok) return null; return await r.json(); }
+  catch (e) { return null; }
+}
+async function refresh() {
+  const [d, s] = await Promise.all([fetchJson('data.json'), fetchJson('signals.json')]);
+  if (d) data = d;
+  if (s) signals = s;
+  const parts = [];
+  if (data) parts.push('precio ' + new Date(data.asof * 1000).toLocaleTimeString('es-CO', { hour12: false }));
+  const hasSignals = signals && Object.keys(signals).some(k => (k === 'QQQ' || k === 'SPY') && Object.values(signals[k] || {}).some(v => v !== null && typeof v !== 'object'));
+  parts.push(hasSignals ? 'signals.json activo' : 'datos manuales');
+  document.getElementById('srcinfo').textContent = parts.join(' · ');
+  syncInputsPlaceholders();
+  render();
+}
+function syncInputsPlaceholders() {
+  document.querySelectorAll('input[data-k]').forEach(el => {
+    if (RISK.some(r => r[0] === el.dataset.k)) return;
+    const a = autoValue(el.dataset.k);
+    el.placeholder = a != null ? 'auto ' + a : '—';
+  });
+}
+
+load(); buildForms(); bind(); syncInputs(); render(); refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>

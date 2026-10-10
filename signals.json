@@ -1,0 +1,17 @@
+{
+  "asof": null,
+  "QQQ": {
+    "vwap": null, "ema9": null, "ema21": null, "ema50": null,
+    "bbMid": null, "relVol": null,
+    "gex": { "zeroGamma": null, "callWall": null, "putWall": null, "netGex": null },
+    "agresor": null, "qDelta": null, "qDeltaPrev": null,
+    "spreadPct": null
+  },
+  "SPY": {
+    "vwap": null, "ema9": null, "ema21": null, "ema50": null,
+    "bbMid": null, "relVol": null,
+    "gex": { "zeroGamma": null, "callWall": null, "putWall": null, "netGex": null },
+    "agresor": null, "qDelta": null, "qDeltaPrev": null,
+    "spreadPct": null
+  }
+}
