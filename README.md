@@ -4,6 +4,9 @@ Dashboard en GitHub Pages para QQQ / SPY.
 
 - `index.html` — movers de los componentes con más peso (datos de Finnhub vía GitHub Actions).
 - `scoring.html` — scoring de entradas y salidas CALL / PUT para SPY y QQQ.
+- `flow.html` — flujo de opciones y niveles GEX (Call Wall, Put Wall, Gamma Flip, Agresor, Q Delta). Datos de demostración hasta que corras `flow/gex_flow.py`; ver `flow/README.md`.
+
+Pruebas: `node tests/scoring.test.js` y `python3 tests/test_flow.py`.
 
 ## Scoring de entradas (`scoring.html`)
 
@@ -28,6 +31,6 @@ Webull replica a 1/4 del tamaño.
 
 Prioridad por campo: lo que escribas en la página > `signals.json` > `data.json` (solo precio).
 
-`data.json` solo trae precio y variación del día (Finnhub, sin volumen ni intradía), así que VWAP, EMAs, GEX, Agresor y Q Delta no se pueden calcular desde ahí. Para automatizarlos, un proceso externo (por ejemplo tu VPS con IBKR) puede escribir `signals.json` con la estructura incluida en el repo y hacer commit; la página lo lee cada 60 s.
+`data.json` solo trae precio y variación del día (Finnhub, sin volumen ni intradía), así que VWAP, EMAs, GEX, Agresor y Q Delta no se pueden calcular desde ahí. `flow/gex_flow.py` los calcula y los escribe en `signals.json` (con `--git-push` los sube al repo); la página lo lee cada 60 s. Cualquier otro proceso (por ejemplo tu VPS con IBKR) también puede escribirlo con la misma estructura.
 
 Tolerancias y umbrales editables en `CFG` dentro de `scoring.js`. No es una recomendación financiera.

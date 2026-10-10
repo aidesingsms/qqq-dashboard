@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flujo GEX · SPY / QQQ</title>
+<style>
+  :root{
+    --bg:#0A0D16; --panel:#0E1220; --line:#1C2236; --ink:#C9D1E6; --mute:#6B7794;
+    --up:#22C55E; --down:#EF4444; --cy:#4CC9F0; --gold:#E0B04A; --pw:#FF5EA8; --vi:#8B5CF6; --accent:#E8A33D;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0 auto;background:var(--bg);color:var(--ink);font:13px/1.45 'Segoe UI',system-ui,-apple-system,sans-serif;
+       padding:14px 12px 44px;max-width:760px;}
+  a{color:var(--accent);text-decoration:none;font-size:12.5px;}
+  header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+  h1{font-size:16px;margin:0;font-weight:600;}
+  .links{display:flex;gap:14px;}
+  select{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;font:inherit;}
+  .badge{padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;background:#3B2A05;color:#F5B84B;}
+  .badge.live{background:#06301A;color:#4ADE80;}
+  .badge.stale{background:#3B1212;color:#F87171;}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 9px;}
+  .kpi .l{font-size:10.5px;color:var(--mute);}
+  .kpi .v{font-family:'Consolas','SF Mono',monospace;font-size:15px;font-weight:600;margin-top:1px;}
+  .readout{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;margin-bottom:10px;
+           font-family:'Consolas','SF Mono',monospace;font-size:11.5px;color:var(--mute);min-height:34px;}
+  .readout b{color:var(--ink);font-weight:600;}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 10px 6px;margin-bottom:10px;}
+  section h2{font-size:11px;font-weight:600;color:var(--mute);letter-spacing:.04em;text-transform:uppercase;margin:0 0 4px;}
+  svg{display:block;width:100%;height:auto;touch-action:pan-y;}
+  svg text{font-family:'Consolas','SF Mono',monospace;fill:var(--mute);font-size:10px;}
+  .empty{color:var(--mute);font-size:12px;padding:18px 0;text-align:center;}
+  .note{font-size:11.5px;color:var(--mute);line-height:1.55;margin-top:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Flujo GEX <span class="badge" id="badge">…</span></h1>
+    <div class="links"><a href="index.html">← Movers</a><a href="scoring.html">Scoring →</a></div>
+  </div>
+  <select id="symSel"><option>SPY</option><option>QQQ</option></select>
+</header>
+
+<div class="kpis" id="kpis"></div>
+<div class="readout" id="readout">Toca o pasa el cursor sobre un gráfico para ver los valores de ese momento.</div>
+
+<div id="panels">
+  <section><h2>Precio · Call Wall / Gamma Flip / Put Wall</h2><svg id="p-price"></svg></section>
+  <section><h2>Agresor <span style="text-transform:none">(cian = compra · violeta = venta)</span></h2><svg id="p-agg"></svg></section>
+  <section><h2>Flujo · instantáneo (barras) y acumulado (línea)</h2><svg id="p-flow"></svg></section>
+  <section><h2>Premium total</h2><svg id="p-total"></svg></section>
+  <section><h2>Q Delta</h2><svg id="p-qd"></svg></section>
+</div>
+<section><h2>Perfil GEX por strike</h2><svg id="p-prof"></svg></section>
+
+<div class="note" id="note"></div>
+
+<script>
+const W = 640, ML = 8, MR = 68;
+const $ = id => document.getElementById(id);
+let D = null, N = 0, cursorIdx = null;
+
+// ---------- utilidades ----------
+function fm(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const a = Math.abs(v), s = v < 0 ? '-' : '';
+  if (a >= 1e9) return s + '$' + (a / 1e9).toFixed(1) + 'B';
+  if (a >= 1e6) return s + '$' + (a / 1e6).toFixed(1) + 'M';
+  if (a >= 1e3) return s + '$' + (a / 1e3).toFixed(0) + 'K';
+  return s + '$' + a.toFixed(0);
+}
+function hex(c) { return [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)); }
+function mix(a, b, t) { const A = hex(a), B = hex(b); return 'rgb(' + A.map((x, i) => Math.round(x + (B[i] - x) * t)).join(',') + ')'; }
+function aggColor(v) { return v >= 0 ? mix('#1A2036', '#4CC9F0', Math.min(1, v)) : mix('#1A2036', '#8B5CF6', Math.min(1, -v)); }
+function xAt(i) { return ML + (i + 0.5) * (W - ML - MR) / Math.max(N, 1); }
+function bw() { return Math.max(1, (W - ML - MR) / Math.max(N, 1) - 1); }
+function yScale(min, max, h, pt, pb) { const r = (max - min) || 1; return v => pt + (max - v) / r * (h - pt - pb); }
+function setSvg(id, h, inner) {
+  const s = $(id); s.setAttribute('viewBox', '0 0 ' + W + ' ' + h); s.innerHTML = inner +
+    '<line class="cur" x1="0" x2="0" y1="0" y2="' + h + '" stroke="#fff" stroke-opacity=".35" style="display:none"/>';
+}
+function msg(id, text) { $(id).setAttribute('viewBox', '0 0 ' + W + ' 40'); $(id).innerHTML = '<text x="' + W / 2 + '" y="24" text-anchor="middle">' + text + '</text>'; }
+function rtext(x, y, t, fill) { return '<text x="' + x + '" y="' + y + '"' + (fill ? ' style="fill:' + fill + '"' : '') + '>' + t + '</text>'; }
+function grid(y, label) { return '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y + '" y2="' + y + '" stroke="#1C2236"/>' + (label ? rtext(W - MR + 4, y + 3, label) : ''); }
+
+// ---------- demo ----------
+function demo(sym) {
+  const base = sym === 'QQQ' ? 751 : 778;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const g = () => { let u = 0; for (let i = 0; i < 6; i++) u += rnd(); return (u - 3) / 1.2; };
+  const n = 150; let p = base, cum = 0; const series = [];
+  for (let i = 0; i < n; i++) {
+    p += g() * base * 0.0004 - (i > 100 ? base * 0.00008 : 0);
+    const flow = g() * 30e6 - (i > 100 ? 40e6 : 0); cum += flow;
+    let tot = Math.abs(g() * 40e6 + 60e6); if (rnd() < 0.05) tot += 300e6 + rnd() * 400e6;
+    const m = 570 + i * 2;
+    series.push({ t: String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'),
+      price: +p.toFixed(2), flow, cum_flow: cum, total: tot, qdelta: g() * 0.2e9 + (i > 100 ? -0.5e9 : 0), agg: Math.tanh(flow / 6e7) });
+  }
+  const cw = Math.round(base * 1.008), pw = Math.round(base * 0.992), profile = [];
+  for (let k = Math.round(base * 0.98); k <= Math.round(base * 1.02); k++)
+    profile.push({ strike: k, call: Math.max(0, 4e9 * Math.exp(-(((k - cw) / 4) ** 2))), put: -Math.max(0, 4e9 * Math.exp(-(((k - pw) / 4) ** 2))) });
+  return { symbol: sym, demo: true, estimated: true, updated: new Date().toISOString(), spot: series[n - 1].price,
+    levels: { call_wall: cw, put_wall: pw, gamma_flip: +(base * 1.001).toFixed(1), net_gex_total: 1.2e9, profile }, series };
+}
+
+// ---------- paneles ----------
+function drawPrice() {
+  const s = D.series; if (!s.length) return msg('p-price', 'Acumulando datos… (el primer snapshot solo fija la base)');
+  const lv = D.levels, H = 190;
+  const prices = s.map(b => b.price);
+  let lo = Math.min(...prices), hi = Math.max(...prices);
+  const lines = [['CW', lv.call_wall, '#22C55E'], ['GF', lv.gamma_flip, '#E0B04A'], ['PW', lv.put_wall, '#FF5EA8']];
+  const off = [];
+  lines.forEach(([n, v]) => { if (v == null) return; if (Math.abs(v - D.spot) <= D.spot * 0.012) { lo = Math.min(lo, v); hi = Math.max(hi, v); } else off.push(n); });
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const y = yScale(lo, hi, H, 6, 6);
+  let out = '', pts = s.map((b, i) => xAt(i).toFixed(1) + ',' + y(b.price).toFixed(1)).join(' ');
+  lines.forEach(([n, v, c]) => {
+    if (v == null || v < lo || v > hi) return;
+    out += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="' + c + '" stroke-dasharray="' + (n === 'GF' ? '2 3' : '5 3') + '" stroke-opacity=".8"/>' + rtext(W - MR + 4, y(v) + 3, n + ' ' + v, c);
+  });
+  out += '<polyline fill="none" stroke="#C9D1E6" stroke-width="1.5" points="' + pts + '"/>';
+  out += rtext(W - MR + 4, y(s[s.length - 1].price) - 6, s[s.length - 1].price.toFixed(2), '#C9D1E6');
+  if (off.length) out += rtext(ML + 2, 12, 'fuera de rango: ' + off.join(', '));
+  setSvg('p-price', H, out);
+}
+function drawAgg() {
+  const s = D.series; if (!s.length) return msg('p-agg', '—');
+  let out = ''; s.forEach((b, i) => { out += '<rect x="' + (xAt(i) - bw() / 2).toFixed(1) + '" y="4" width="' + bw().toFixed(1) + '" height="34" fill="' + aggColor(b.agg) + '"/>'; });
+  setSvg('p-agg', 44, out);
+}
+function drawFlow() {
+  const s = D.series; if (!s.length) return msg('p-flow', '—');
+  const H = 130, mx = Math.max(...s.map(b => Math.abs(b.flow)), 1), mid = H / 2;
+  const cum = s.map(b => b.cum_flow), cmin = Math.min(...cum, 0), cmax = Math.max(...cum, 0);
+  const yc = yScale(cmin, cmax, H, 8, 8);
+  let out = grid(mid, '');
+  s.forEach((b, i) => {
+    const h = Math.abs(b.flow) / mx * (mid - 6);
+    out += '<rect x="' + (xAt(i) - bw() / 2).toFixed(1) + '" y="' + (b.flow >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw().toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + (b.flow >= 0 ? '#22C55E' : '#EF4444') + '" fill-opacity=".55"/>';
+  });
+  out += '<polyline fill="none" stroke="#4CC9F0" stroke-width="1.6" points="' + s.map((b, i) => xAt(i).toFixed(1) + ',' + yc(b.cum_flow).toFixed(1)).join(' ') + '"/>';
+  out += rtext(W - MR + 4, yc(cmax) + 8, fm(cmax), '#4CC9F0') + rtext(W - MR + 4, yc(cmin) - 2, fm(cmin), '#4CC9F0');
+  const last = s[s.length - 1].cum_flow, yl = yc(last);
+  if (Math.abs(yl - yc(cmax)) > 14 && Math.abs(yl - yc(cmin)) > 14) out += rtext(W - MR + 4, yl + 3, fm(last), '#C9D1E6');
+  setSvg('p-flow', H, out);
+}
+function drawTotal() {
+  const s = D.series; if (!s.length) return msg('p-total', '—');
+  const H = 90, vals = s.map(b => b.total), mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length), mx = Math.max(...vals, 1);
+  let out = '';
+  s.forEach((b, i) => {
+    const h = b.total / mx * (H - 14);
+    out += '<rect x="' + (xAt(i) - bw() / 2).toFixed(1) + '" y="' + (H - 6 - h).toFixed(1) + '" width="' + bw().toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + (b.total > mean + 2 * sd ? '#E0B04A' : '#4B5A85') + '"/>';
+  });
+  out += rtext(W - MR + 4, 12, fm(mx));
+  setSvg('p-total', H, out);
+}
+function drawQd() {
+  const s = D.series; if (!s.length) return msg('p-qd', '—');
+  const H = 120, mx = Math.max(...s.map(b => Math.abs(b.qdelta)), 1), mid = 46;
+  let out = grid(mid, '');
+  s.forEach((b, i) => {
+    const h = Math.abs(b.qdelta) / mx * (mid - 6);
+    out += '<rect x="' + (xAt(i) - bw() / 2).toFixed(1) + '" y="' + (b.qdelta >= 0 ? mid - h : mid).toFixed(1) + '" width="' + bw().toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + (b.qdelta >= 0 ? '#22C55E' : '#EF4444') + '" fill-opacity=".8"/>';
+  });
+  out += rtext(W - MR + 4, 12, fm(mx)) + rtext(W - MR + 4, 2 * mid - 4, fm(-mx));
+  const step = Math.max(1, Math.round(N / 6));
+  for (let i = 0; i < N; i += step) out += '<text x="' + (i === 0 ? ML : xAt(i).toFixed(1)) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : 'middle') + '">' + s[i].t + '</text>';
+  setSvg('p-qd', H, out);
+}
+function drawProfile() {
+  const p = D.levels.profile || []; if (!p.length) return msg('p-prof', 'Sin perfil disponible');
+  const rows = p.slice().sort((a, b) => b.strike - a.strike), rh = 13, H = rows.length * rh + 12, cx = W / 2;
+  const mx = Math.max(...rows.map(r => Math.max(Math.abs(r.call), Math.abs(r.put))), 1);
+  const lv = D.levels, near = rows.reduce((a, r) => Math.abs(r.strike - D.spot) < Math.abs(a.strike - D.spot) ? r : a, rows[0]);
+  let out = '<line x1="' + cx + '" x2="' + cx + '" y1="0" y2="' + H + '" stroke="#1C2236"/>';
+  rows.forEach((r, i) => {
+    const y = 6 + i * rh, wc = Math.abs(r.call) / mx * (cx - 70), wp = Math.abs(r.put) / mx * (cx - 70);
+    if (r === near) out += '<rect x="0" y="' + (y - 1) + '" width="' + W + '" height="' + (rh - 1) + '" fill="#fff" fill-opacity=".05"/>';
+    out += '<rect x="' + cx + '" y="' + y + '" width="' + wc.toFixed(1) + '" height="' + (rh - 3) + '" fill="#22C55E" fill-opacity=".75"/>';
+    out += '<rect x="' + (cx - wp).toFixed(1) + '" y="' + y + '" width="' + wp.toFixed(1) + '" height="' + (rh - 3) + '" fill="#FF5EA8" fill-opacity=".75"/>';
+    let tag = ''; if (r.strike === lv.call_wall) tag += ' CW'; if (r.strike === lv.put_wall) tag += ' PW';
+    out += '<text x="4" y="' + (y + 9) + '">' + r.strike + (r === near ? ' ◀ precio' : '') + '</text>';
+    if (tag) out += '<text x="' + (W - 4) + '" y="' + (y + 9) + '" text-anchor="end" style="fill:#E0B04A">' + tag.trim() + '</text>';
+  });
+  const s = $('p-prof'); s.setAttribute('viewBox', '0 0 ' + W + ' ' + H); s.innerHTML = out;
+}
+
+function kpis() {
+  const lv = D.levels, f = v => v == null ? '—' : v;
+  const items = [['Precio', D.spot.toFixed(2), ''], ['Call Wall', f(lv.call_wall), 'var(--up)'], ['Put Wall', f(lv.put_wall), 'var(--pw)'],
+    ['Gamma Flip', f(lv.gamma_flip), 'var(--gold)'], ['GEX neto', fm(lv.net_gex_total), lv.net_gex_total >= 0 ? 'var(--up)' : 'var(--down)'],
+    ['Posición', lv.gamma_flip == null ? '—' : (D.spot >= lv.gamma_flip ? 'sobre Flip' : 'bajo Flip'), '']];
+  $('kpis').innerHTML = items.map(([l, v, c]) => '<div class="kpi"><div class="l">' + l + '</div><div class="v"' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</div></div>').join('');
+}
+
+function showReadout(i) {
+  if (!D || !D.series.length) return;
+  i = Math.max(0, Math.min(N - 1, i)); const b = D.series[i];
+  $('readout').innerHTML = '<b>' + b.t + '</b> · precio <b>' + b.price.toFixed(2) + '</b> · flujo <b>' + fm(b.flow) + '</b> · acum. <b>' + fm(b.cum_flow) +
+    '</b> · total <b>' + fm(b.total) + '</b> · Q Delta <b>' + fm(b.qdelta) + '</b> · agresor <b>' + Math.round(b.agg * 100) + '%</b>';
+  const x = xAt(i);
+  document.querySelectorAll('#panels line.cur').forEach(l => { l.setAttribute('x1', x); l.setAttribute('x2', x); l.style.display = ''; });
+}
+function onMove(e) {
+  const svg = e.target.closest('svg'); if (!svg || !D || !N) return;
+  const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+  showReadout(Math.floor((px - ML) / ((W - MR - ML) / N)));
+}
+
+function badge() {
+  const b = $('badge');
+  if (D.demo) { b.className = 'badge'; b.textContent = 'DEMO'; return; }
+  const age = (Date.now() - new Date(D.updated).getTime()) / 60000;
+  if (age > 30) { b.className = 'badge stale'; b.textContent = 'desactualizado ' + Math.round(age) + ' min'; }
+  else { b.className = 'badge live'; b.textContent = 'ESTIMADO · hace ' + Math.max(0, Math.round(age)) + ' min'; }
+}
+
+function render() {
+  N = D.series.length; badge(); kpis();
+  drawPrice(); drawAgg(); drawFlow(); drawTotal(); drawQd(); drawProfile();
+  $('note').innerHTML = D.demo
+    ? 'Estos son <b>datos de demostración</b> (sintéticos). Para ver datos reales corre <code>flow/gex_flow.py</code> en tu VPS o computadora y sube <code>flow/flow_' + D.symbol + '.json</code> (ver <code>flow/README.md</code>).'
+    : 'Flujo, agresor y Q Delta son <b>estimaciones</b>: cambios de volumen entre snapshots con el lado inferido por el último precio vs. el punto medio bid/ask. No es el tape real; las órdenes de varias patas distorsionan la lectura del agresor. Niveles GEX con la convención dealer (calls +, puts −).';
+  if (N) showReadout(cursorIdx != null ? cursorIdx : N - 1);
+}
+
+async function load() {
+  const sym = $('symSel').value;
+  try {
+    const r = await fetch('flow/flow_' + sym + '.json?_=' + Date.now());
+    if (!r.ok) throw new Error('sin archivo');
+    D = await r.json();
+    if (!D.series || !D.levels) throw new Error('formato');
+  } catch (e) { D = demo(sym); }
+  render();
+}
+
+$('symSel').addEventListener('change', () => { cursorIdx = null; load(); });
+$('panels').addEventListener('pointermove', e => { const svg = e.target.closest('svg'); if (!svg) return; const r = svg.getBoundingClientRect(); cursorIdx = Math.floor(((e.clientX - r.left) / r.width * W - ML) / ((W - MR - ML) / Math.max(N, 1))); onMove(e); });
+$('panels').addEventListener('pointerleave', () => { cursorIdx = null; if (D && N) showReadout(N - 1); });
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

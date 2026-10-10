@@ -1,0 +1,5 @@
+flow/state_*.json
+flow/*.tmp
+__pycache__/
+tests/__pycache__/
+flow/__pycache__/
