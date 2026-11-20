@@ -1,5 +1,5 @@
 {
-  "asof": 1795122911,
+  "asof": 1795141489,
   "indices": {
     "QQQ": {
       "price": 645.04,
@@ -65,10 +65,10 @@
       ],
       "bollinger": {
         "ready": true,
-        "sma": 669.47,
-        "upper": 700.373,
-        "lower": 638.567,
-        "bandwidth_pct": 9.232,
+        "sma": 667.125,
+        "upper": 697.967,
+        "lower": 636.282,
+        "bandwidth_pct": 9.247,
         "n": 20,
         "period": 20
       }
@@ -151,10 +151,10 @@
       ],
       "bollinger": {
         "ready": true,
-        "sma": 744.161,
-        "upper": 770.589,
-        "lower": 717.733,
-        "bandwidth_pct": 7.103,
+        "sma": 741.614,
+        "upper": 768.632,
+        "lower": 714.596,
+        "bandwidth_pct": 7.286,
         "n": 20,
         "period": 20
       }
